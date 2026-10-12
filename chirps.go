@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AirflowSteve/chirpy/internal/auth"
 	"github.com/AirflowSteve/chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -57,6 +58,19 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusInternalServerError, "couldn't decode the request", err)
 		return
 	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "couldn't get the token", err)
+		return
+	}
+
+	usrID, err := auth.ValidateJWT(token, cfg.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "couldn't validate the token", err)
+		return
+	}
+
 	c, err := validateChirp(params.Body)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "chirp wasn't validated", err)
@@ -64,7 +78,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 	}
 	result_ch, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   c,
-		UserID: params.UserID,
+		UserID: usrID,
 	})
 
 	if err != nil {

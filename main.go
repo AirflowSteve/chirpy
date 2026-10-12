@@ -16,6 +16,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	platform       string
+	secret         string
 }
 
 func handlerHealthz(rw http.ResponseWriter, r *http.Request) {
@@ -29,6 +30,7 @@ func main() {
 	godotenv.Load(".env")
 	dbUrl := os.Getenv("DB_URL")
 	plfrm := os.Getenv("PLATFORM")
+	scrt := os.Getenv("SECRET")
 
 	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
@@ -47,6 +49,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		db:             DBQueries,
 		platform:       plfrm,
+		secret:         scrt,
 	}
 
 	handler.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
@@ -59,5 +62,8 @@ func main() {
 	handler.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps)
 	handler.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetChirpByID)
 	handler.HandleFunc("POST /api/login", apiCfg.handlerLogin)
+	handler.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh)
+	handler.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke)
+	handler.HandleFunc("PUT /api/users", apiCfg.handlerChangeCredentials)
 	server.ListenAndServe()
 }
