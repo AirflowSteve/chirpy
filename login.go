@@ -15,6 +15,13 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 		Email    string `json:"email"`
 	}
+
+	type user_parameters struct {
+		User
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
+	}
+
 	usr := parameters{}
 
 	err := decoder.Decode(&usr)
@@ -51,12 +58,13 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "couldn't create the refresh token", err)
 	}
 
-	respondWithJSON(w, http.StatusOK, User{
+	respondWithJSON(w, http.StatusOK, user_parameters{
 		ID:           user.ID,
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 		Email:        user.Email,
 		Token:        tkn,
 		RefreshToken: r_tkn.Token,
+		IsChirpyRed:  user.IsChirpyRed,
 	})
 }

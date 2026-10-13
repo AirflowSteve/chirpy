@@ -22,6 +22,13 @@ func (cfg *apiConfig) handlerChangeCredentials(w http.ResponseWriter, r *http.Re
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
+
+	type user_parameters struct {
+		User
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
+	}
+
 	params := parameters{}
 
 	decoder := json.NewDecoder(r.Body)
@@ -44,11 +51,13 @@ func (cfg *apiConfig) handlerChangeCredentials(w http.ResponseWriter, r *http.Re
 		respondWithError(w, http.StatusInternalServerError, "couldn't update the password", err)
 	}
 
-	respondWithJSON(w, 200, User{
-		ID:        usr.ID,
-		CreatedAt: usr.CreatedAt,
-		Email:     usr.Email,
-		Token:     bearer,
+	respondWithJSON(w, 200, user_parameters{
+		ID:          usr.ID,
+		CreatedAt:   usr.CreatedAt,
+		Email:       usr.Email,
+		Token:       bearer,
+		IsChirpyRed: usr.IsChirpyRed,
+		UpdatedAt:   usr.UpdatedAt,
 	})
 
 }

@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"sync/atomic"
@@ -17,6 +17,7 @@ type apiConfig struct {
 	db             *database.Queries
 	platform       string
 	secret         string
+	apiKey         string
 }
 
 func handlerHealthz(rw http.ResponseWriter, r *http.Request) {
@@ -31,10 +32,11 @@ func main() {
 	dbUrl := os.Getenv("DB_URL")
 	plfrm := os.Getenv("PLATFORM")
 	scrt := os.Getenv("SECRET")
+	apiKEY := os.Getenv("PAYMENTAPI")
 
 	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
-		fmt.Printf("there was an error", err)
+		log.Printf("there was an error", err)
 	}
 
 	DBQueries := database.New(db)
@@ -50,6 +52,7 @@ func main() {
 		db:             DBQueries,
 		platform:       plfrm,
 		secret:         scrt,
+		apiKey:         apiKEY,
 	}
 
 	handler.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
@@ -65,5 +68,7 @@ func main() {
 	handler.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh)
 	handler.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke)
 	handler.HandleFunc("PUT /api/users", apiCfg.handlerChangeCredentials)
+	handler.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerDeleteChirp)
+	handler.HandleFunc("POST /api/polka/webhooks", apiCfg.handlerUpgradeUser)
 	server.ListenAndServe()
 }
