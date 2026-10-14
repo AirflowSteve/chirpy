@@ -10,6 +10,7 @@ import (
 	"github.com/AirflowSteve/chirpy/internal/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"tailscale.com/tsnet"
 )
 
 type apiConfig struct {
@@ -33,15 +34,30 @@ func main() {
 	plfrm := os.Getenv("PLATFORM")
 	scrt := os.Getenv("SECRET")
 	apiKEY := os.Getenv("PAYMENTAPI")
+	tsAuthKey := os.Getenv("TSKEY")
 
 	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
-		log.Printf("there was an error", err)
+		log.Printf("there was an error %v\n", err)
 	}
 
 	DBQueries := database.New(db)
 
 	handler := http.NewServeMux()
+	ts := &tsnet.Server{
+		Hostname: "chirpy",
+		Dir:      "./tsnet-state",
+		AuthKey:  tsAuthKey,
+	}
+
+	defer ts.Close()
+
+	ln, err := ts.Listen("tcp", ":80")
+	if err != nil {
+		log.Println(err)
+	}
+	defer ln.Close()
+
 	server := http.Server{
 		Handler: handler,
 		Addr:    ":8080",
@@ -70,5 +86,5 @@ func main() {
 	handler.HandleFunc("PUT /api/users", apiCfg.handlerChangeCredentials)
 	handler.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerDeleteChirp)
 	handler.HandleFunc("POST /api/polka/webhooks", apiCfg.handlerUpgradeUser)
-	server.ListenAndServe()
+	server.Serve(ln)
 }
